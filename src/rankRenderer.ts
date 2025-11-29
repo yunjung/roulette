@@ -7,6 +7,7 @@ import { Marble } from './marble';
 export class RankRenderer implements UIObject {
   private _currentY = 0;
   private _targetY = 0;
+  private baseFontHeight = 16;
   private fontHeight = 16;
   private _userMoved = 0;
   private _currentWinner = -1;
@@ -15,6 +16,7 @@ export class RankRenderer implements UIObject {
   private marbles: Marble[] = [];
   private winnerRank: number = -1;
   private messageHandler?: (msg: string) => void;
+  private _scaleFactor = 1;
 
   constructor() {
   }
@@ -56,68 +58,68 @@ export class RankRenderer implements UIObject {
 
   render(
     ctx: CanvasRenderingContext2D,
-    { winners, marbles, winnerRank, theme }: RenderParameters,
+    { allWinners, marbles, winnerRank, winnerRanks, theme }: RenderParameters,
     width: number,
     height: number,
   ) {
-    const startX = width - 5;
+    // Use allWinners for rank display (all finishers)
+    const displayWinners = allWinners || [];
+    const selectedRanks = winnerRanks || [winnerRank];
+
+    // Scale fonts based on canvas size (assuming base width of 1280)
+    this._scaleFactor = Math.max(1, width / 1280);
+    this.fontHeight = this.baseFontHeight * this._scaleFactor;
+
+    const startX = width - 10 * this._scaleFactor;
     const startY = Math.max(-this.fontHeight, this._currentY - height / 2);
     this.maxY = Math.max(
       0,
-      (marbles.length + winners.length) * this.fontHeight + this.fontHeight,
+      (marbles.length + displayWinners.length) * this.fontHeight + this.fontHeight,
     );
-    this._currentWinner = winners.length;
+    this._currentWinner = displayWinners.length;
 
-    this.winners = winners;
+    this.winners = displayWinners;
     this.marbles = marbles;
     this.winnerRank = winnerRank;
 
+    const baseFontSize = 10 * this._scaleFactor;
+    const boldFontSize = 11 * this._scaleFactor;
+    const clipWidth = 200 * this._scaleFactor;
+
     ctx.save();
     ctx.textAlign = 'right';
-    ctx.font = '10pt sans-serif';
+    ctx.font = `${baseFontSize}pt sans-serif`;
     ctx.fillStyle = '#666';
-    ctx.fillText(`${winners.length} / ${winners.length + marbles.length}`, width - 5, this.fontHeight);
+    ctx.fillText(`${displayWinners.length} / ${displayWinners.length + marbles.length}`, width - 10 * this._scaleFactor, this.fontHeight);
 
     ctx.beginPath();
-    ctx.rect(width - 150, this.fontHeight + 2, width, this.maxY);
+    ctx.rect(width - clipWidth, this.fontHeight + 2, clipWidth, this.maxY);
     ctx.clip();
 
     ctx.translate(0, -startY);
-    ctx.font = 'bold 11pt sans-serif';
-    if (theme.rankStroke) {
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = theme.rankStroke;
-    }
-    winners.forEach((marble: { hue: number, name: string }, rank: number) => {
+    ctx.font = `bold ${boldFontSize}pt sans-serif`;
+    displayWinners.forEach((marble: { hue: number, name: string }, rank: number) => {
       const y = rank * this.fontHeight;
       if (y >= startY && y <= startY + ctx.canvas.height) {
         ctx.fillStyle = `hsl(${marble.hue} 100% ${theme.marbleLightness}`;
-        ctx.strokeText(
-          `${rank === winnerRank ? '☆' : '\u2714'} ${marble.name} #${rank + 1}`,
-          startX,
-          20 + y,
-        );
+        // Mark with star if this rank is one of the selected winner positions
+        const isSelectedWinner = selectedRanks.includes(rank);
         ctx.fillText(
-          `${rank === winnerRank ? '☆' : '\u2714'} ${marble.name} #${rank + 1}`,
+          `${isSelectedWinner ? '☆' : '\u2714'} ${marble.name} #${rank + 1}`,
           startX,
-          20 + y,
+          20 * this._scaleFactor + y,
         );
       }
     });
-    ctx.font = '10pt sans-serif';
+    ctx.font = `${baseFontSize}pt sans-serif`;
     marbles.forEach((marble: { hue: number; name: string }, rank: number) => {
-      const y = (rank + winners.length) * this.fontHeight;
+      const y = (rank + displayWinners.length) * this.fontHeight;
       if (y >= startY && y <= startY + ctx.canvas.height) {
         ctx.fillStyle = `hsl(${marble.hue} 100% ${theme.marbleLightness}`;
-        ctx.strokeText(
-          `${marble.name} #${rank + 1 + winners.length}`,
-          startX,
-          20 + y,
-        );
         ctx.fillText(
-          `${marble.name} #${rank + 1 + winners.length}`,
+          `${marble.name} #${rank + 1 + displayWinners.length}`,
           startX,
-          20 + y,
+          20 * this._scaleFactor + y,
         );
       }
     });

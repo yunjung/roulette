@@ -25,6 +25,10 @@ export class Marble {
   private lastPosition: VectorLike = { x: 0, y: 0 };
   private theme: ColorTheme = Themes.dark;
 
+  // Ornament properties
+  private floatOffset: number = 0;
+  private floatPhase: number = Math.random() * Math.PI * 2;
+
   private physics: IPhysics;
 
   id: number;
@@ -102,9 +106,16 @@ export class Marble {
     if (this.impact) {
       this.impact = Math.max(0, this.impact - deltaTime);
     }
-    if (!this.isActive) return;
-    if (options.useSkills) {
-      this._updateSkillInformation(deltaTime);
+
+    // Add subtle floating animation when not active
+    if (!this.isActive) {
+      this.floatPhase += deltaTime / 1000;
+      this.floatOffset = Math.sin(this.floatPhase * 2) * 0.05; // Small vertical bob
+    } else {
+      this.floatOffset = 0;
+      if (options.useSkills) {
+        this._updateSkillInformation(deltaTime);
+      }
     }
   }
 
@@ -154,11 +165,67 @@ export class Marble {
   }
 
   private _drawMarbleBody(ctx: CanvasRenderingContext2D, isMinimap: boolean) {
-    ctx.beginPath();
-    ctx.arc(
+    const radius = isMinimap ? this.size : this.size / 2;
+    const yPos = this.y + this.floatOffset;
+
+    if (isMinimap) {
+      // Simple circle for minimap
+      ctx.beginPath();
+      ctx.arc(this.x, yPos, radius, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      // Full ornament rendering for main canvas
+      this._drawOrnament(ctx, radius, yPos);
+    }
+  }
+
+  private _drawOrnament(ctx: CanvasRenderingContext2D, radius: number, yPos: number) {
+    // 1. Create radial gradient for metallic look
+    const gradient = ctx.createRadialGradient(
+      this.x - radius * 0.3,
+      yPos - radius * 0.3,
+      radius * 0.1,
       this.x,
-      this.y,
-      isMinimap ? this.size : this.size / 2,
+      yPos,
+      radius,
+    );
+    gradient.addColorStop(0, `hsl(${this.hue} 100% 85%)`); // Highlight
+    gradient.addColorStop(
+      0.5,
+      `hsl(${this.hue} 100% ${this.theme.marbleLightness}%)`,
+    );
+    gradient.addColorStop(1, `hsl(${this.hue} 80% 35%)`); // Shadow
+
+    // 2. Draw ornament ball
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(this.x, yPos, radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 3. Draw ornament cap (gold/silver top)
+    const capHeight = radius * 0.3;
+    ctx.fillStyle = '#C9B037'; // Antique gold
+    ctx.beginPath();
+    ctx.arc(this.x, yPos - radius, radius * 0.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 4. Draw hanging hook
+    ctx.strokeStyle = '#C9B037';
+    ctx.lineWidth = radius * 0.1;
+    ctx.beginPath();
+    ctx.moveTo(this.x, yPos - radius);
+    ctx.lineTo(this.x, yPos - radius - capHeight);
+    ctx.stroke();
+
+    // 5. Add shine highlight
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.beginPath();
+    ctx.ellipse(
+      this.x - radius * 0.3,
+      yPos - radius * 0.3,
+      radius * 0.3,
+      radius * 0.4,
+      -Math.PI / 4,
       0,
       Math.PI * 2,
     );
@@ -201,13 +268,14 @@ export class Marble {
   }
 
   private _drawName(ctx: CanvasRenderingContext2D, zoom: number) {
+    const yPos = this.y + this.floatOffset;
     transformGuard(ctx, () => {
-      ctx.font = `12pt sans-serif`;
+      ctx.font = `bold 21pt sans-serif`;
       ctx.strokeStyle = 'black';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 3;
       ctx.fillStyle = this.color;
       ctx.shadowBlur = 0;
-      ctx.translate(this.x, this.y + 0.25);
+      ctx.translate(this.x, yPos + 0.25);
       ctx.scale(1 / zoom, 1 / zoom);
       ctx.strokeText(this.name, 0, 0);
       ctx.fillText(this.name, 0, 0);
@@ -215,20 +283,22 @@ export class Marble {
   }
 
   private _drawOutline(ctx: CanvasRenderingContext2D, lineWidth: number) {
+    const yPos = this.y + this.floatOffset;
     ctx.beginPath();
     ctx.strokeStyle = this.theme.marbleWinningBorder;
     ctx.lineWidth = lineWidth;
-    ctx.arc(this.x, this.y, this.size / 2, 0, Math.PI * 2);
+    ctx.arc(this.x, yPos, this.size / 2, 0, Math.PI * 2);
     ctx.stroke();
   }
 
   private _renderCoolTime(ctx: CanvasRenderingContext2D, zoom: number) {
+    const yPos = this.y + this.floatOffset;
     ctx.strokeStyle = this.theme.coolTimeIndicator;
     ctx.lineWidth = 1 / zoom;
     ctx.beginPath();
     ctx.arc(
       this.x,
-      this.y,
+      yPos,
       this.size / 2 + 2 / zoom,
       rad(270),
       rad(270 + (360 * this._coolTime) / this._maxCoolTime),

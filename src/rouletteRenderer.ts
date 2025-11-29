@@ -9,15 +9,19 @@ import { VectorLike } from './types/VectorLike';
 import { MapEntityState } from './types/MapEntity.type';
 import { ColorTheme } from './types/ColorTheme';
 
+export type SelectedWinner = { marble: Marble, position: number };
+
 export type RenderParameters = {
   camera: Camera;
   stage: StageDef;
   entities: MapEntityState[];
   marbles: Marble[];
-  winners: Marble[];
+  winners: SelectedWinner[]; // Selected winners at specified positions with their actual position
+  allWinners?: Marble[]; // All finishers for rank display
   particleManager: ParticleManager;
   effects: GameObject[];
   winnerRank: number;
+  winnerRanks?: number[]; // Array of winning positions (0-indexed)
   winner: Marble | null;
   size: VectorLike;
   theme: ColorTheme;
@@ -30,8 +34,32 @@ export class RouletteRenderer {
 
   private _images: { [key: string]: HTMLImageElement } = {};
   private _theme: ColorTheme = Themes.dark;
+  private _starFieldPositions: { x: number; y: number; size: number }[] = [];
 
   constructor() {
+    this._initStarField();
+  }
+
+  private _initStarField() {
+    // Generate 100 stars at random positions
+    for (let i = 0; i < 100; i++) {
+      this._starFieldPositions.push({
+        x: Math.random() * canvasWidth,
+        y: Math.random() * canvasHeight,
+        size: Math.random() * 2 + 1,
+      });
+    }
+  }
+
+  private _renderStarField() {
+    this.ctx.save();
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    this._starFieldPositions.forEach((star) => {
+      this.ctx.beginPath();
+      this.ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+      this.ctx.fill();
+    });
+    this.ctx.restore();
   }
 
   get width() {
@@ -66,7 +94,9 @@ export class RouletteRenderer {
       const realSize = entries
         ? entries[0].contentRect
         : this._canvas.getBoundingClientRect();
-      const width = Math.max(realSize.width / 2, 640);
+      // Use devicePixelRatio for high-DPI displays
+      const dpr = window.devicePixelRatio || 1;
+      const width = Math.max(realSize.width * dpr, 640);
       const height = (width / realSize.width) * realSize.height;
       this._canvas.width = width;
       this._canvas.height = height;
@@ -114,8 +144,31 @@ export class RouletteRenderer {
 
   render(renderParameters: RenderParameters, uiObjects: UIObject[]) {
     this._theme = renderParameters.theme;
-    this.ctx.fillStyle = this._theme.background;
+
+    // Render background with gradient support
+    if (this._theme.backgroundGradient) {
+      const gradient = this.ctx.createLinearGradient(
+        0,
+        0,
+        0,
+        this._canvas.height,
+      );
+      this._theme.backgroundGradient.forEach((color, i) => {
+        gradient.addColorStop(
+          i / (this._theme.backgroundGradient!.length - 1),
+          color,
+        );
+      });
+      this.ctx.fillStyle = gradient;
+    } else {
+      this.ctx.fillStyle = this._theme.background;
+    }
     this.ctx.fillRect(0, 0, this._canvas.width, this._canvas.height);
+
+    // Render star field if gradient background is present
+    if (this._theme.backgroundGradient) {
+      this._renderStarField();
+    }
 
     this.ctx.save();
     this.ctx.scale(initialZoom, initialZoom);
@@ -193,10 +246,11 @@ export class RouletteRenderer {
                           marbles,
                           camera,
                           winnerRank,
-                          winners,
+                          allWinners,
                           size,
                         }: RenderParameters) {
-    const winnerIndex = winnerRank - winners.length;
+    const finishedCount = allWinners?.length || 0;
+    const winnerIndex = winnerRank - finishedCount;
 
     const viewPort = { x: camera.x, y: camera.y, w: size.x, h: size.y, zoom: camera.zoom * initialZoom };
     marbles.forEach((marble, i) => {
@@ -212,49 +266,128 @@ export class RouletteRenderer {
     });
   }
 
-  private renderWinner({ winner, theme }: RenderParameters) {
-    if (!winner) return;
+  private renderWinner({ winners, theme }: RenderParameters) {
+    if (!winners || winners.length === 0) return;
     this.ctx.save();
-    this.ctx.fillStyle = theme.winnerBackground;
-    this.ctx.fillRect(
-      this._canvas.width / 2,
-      this._canvas.height - 168,
-      this._canvas.width / 2,
-      168,
-    );
-    this.ctx.fillStyle = theme.winnerText;
-    this.ctx.strokeStyle = theme.winnerOutline;
 
-    this.ctx.font = 'bold 48px sans-serif';
+    // Build comma-separated winner text
+    const winnerNames = winners.map(w => `#${w.position} ${w.marble.name}`).join(', ');
+
+    // Calculate font size based on text length and panel width
+    const panelWidth = this._canvas.width / 2;
+    const panelX = this._canvas.width / 2;
+    const headerHeight = 70;
+    const contentHeight = 60;
+    const panelHeight = headerHeight + contentHeight;
+    const panelY = this._canvas.height - panelHeight;
+
+    // Gradient background
+    if (theme.accentGlow) {
+      const bgGradient = this.ctx.createLinearGradient(
+        panelX,
+        panelY,
+        panelX,
+        this._canvas.height,
+      );
+      bgGradient.addColorStop(0, 'rgba(196, 30, 58, 0.4)'); // Christmas red
+      bgGradient.addColorStop(1, 'rgba(196, 30, 58, 0.6)');
+      this.ctx.fillStyle = bgGradient;
+    } else {
+      this.ctx.fillStyle = theme.winnerBackground;
+    }
+    this.ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
+
+    // Border with glow
+    if (theme.accentGlow) {
+      this.ctx.strokeStyle = theme.accentGlow;
+      this.ctx.lineWidth = 3;
+      this.ctx.shadowColor = theme.accentGlow;
+      this.ctx.shadowBlur = 15;
+      this.ctx.strokeRect(panelX, panelY, panelWidth, panelHeight);
+      this.ctx.shadowBlur = 0;
+
+      // Decorative stars
+      this._drawDecorativeStar(panelX + 20, panelY + 30);
+      this._drawDecorativeStar(panelX + panelWidth - 40, panelY + 30);
+    }
+
+    // "Winner" text with Christmas styling
+    this.ctx.fillStyle = theme.accentGlow || '#FFD700'; // Gold
+    this.ctx.strokeStyle = theme.winnerOutline || '#8B0000'; // Dark red outline
+    this.ctx.font = 'bold 42px sans-serif';
     this.ctx.textAlign = 'right';
     this.ctx.lineWidth = 4;
-    if (theme.winnerOutline) {
-      this.ctx.strokeText(
-        'Winner',
-        this._canvas.width - 10,
-        this._canvas.height - 120,
-      );
+
+    // Text glow
+    if (theme.accentGlow) {
+      this.ctx.shadowColor = theme.accentGlow;
+      this.ctx.shadowBlur = 20;
     }
 
-    this.ctx.fillText(
-      'Winner',
-      this._canvas.width - 10,
-      this._canvas.height - 120,
-    );
-    this.ctx.font = 'bold 72px sans-serif';
-    this.ctx.fillStyle = `hsl(${winner.hue} 100% ${theme.marbleLightness}`;
+    const winnerTextY = panelY + 50;
+    const winnerText = winners.length > 1
+      ? (theme.accentGlow ? '🎄 Winners! 🎄' : 'Winners')
+      : (theme.accentGlow ? '🎄 Winner! 🎄' : 'Winner');
     if (theme.winnerOutline) {
-      this.ctx.strokeText(
-        winner.name,
-        this._canvas.width - 10,
-        this._canvas.height - 55,
-      );
+      this.ctx.strokeText(winnerText, this._canvas.width - 20, winnerTextY);
     }
-    this.ctx.fillText(
-      winner.name,
-      this._canvas.width - 10,
-      this._canvas.height - 55,
-    );
+    this.ctx.fillText(winnerText, this._canvas.width - 20, winnerTextY);
+
+    // Reset shadow blur before drawing winner names
+    this.ctx.shadowBlur = 0;
+
+    // Display winner names in a single line, comma-separated
+    // Calculate font size to fit the panel width
+    const maxWidth = panelWidth - 40;
+    let fontSize = 36;
+    this.ctx.font = `bold ${fontSize}px sans-serif`;
+
+    // Reduce font size until text fits
+    while (this.ctx.measureText(winnerNames).width > maxWidth && fontSize > 14) {
+      fontSize -= 2;
+      this.ctx.font = `bold ${fontSize}px sans-serif`;
+    }
+
+    this.ctx.lineWidth = Math.max(2, fontSize / 12);
+    this.ctx.fillStyle = theme.accentGlow || '#FFD700';
+    this.ctx.strokeStyle = '#FFFFFF';
+
+    const nameY = panelY + headerHeight + 35;
+
+    if (theme.winnerOutline) {
+      this.ctx.strokeText(winnerNames, this._canvas.width - 20, nameY);
+    }
+    this.ctx.fillText(winnerNames, this._canvas.width - 20, nameY);
+
+    this.ctx.restore();
+  }
+
+  private _drawDecorativeStar(x: number, y: number) {
+    this.ctx.save();
+    this.ctx.fillStyle = '#FFD700';
+    this.ctx.shadowColor = '#FFD700';
+    this.ctx.shadowBlur = 10;
+
+    // Draw small star
+    this.ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const angle = (Math.PI * 2 / 5) * i - Math.PI / 2;
+      const outerX = x + Math.cos(angle) * 15;
+      const outerY = y + Math.sin(angle) * 15;
+      const innerAngle = angle + Math.PI / 5;
+      const innerX = x + Math.cos(innerAngle) * 7;
+      const innerY = y + Math.sin(innerAngle) * 7;
+
+      if (i === 0) {
+        this.ctx.moveTo(outerX, outerY);
+      } else {
+        this.ctx.lineTo(outerX, outerY);
+      }
+      this.ctx.lineTo(innerX, innerY);
+    }
+    this.ctx.closePath();
+    this.ctx.fill();
+
     this.ctx.restore();
   }
 }

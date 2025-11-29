@@ -22,4 +22,10 @@ export interface ColorTheme {
   winnerText: string;
   winnerOutline: string;
   winnerBackground: string;
+  // Christmas-specific optional properties
+  backgroundGradient?: string[];  // For gradient backgrounds
+  glassBlur?: number;              // Glassmorphism blur amount
+  glassOpacity?: number;           // Glass panel opacity
+  accentGlow?: string;             // Festive glow color
+  snowColor?: string;              // Snow particle color
 }

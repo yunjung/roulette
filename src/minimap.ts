@@ -14,6 +14,8 @@ export class Minimap implements UIObject {
   private _onViewportChangeHandler: ((pos?: VectorLike) => void) | null = null;
   private boundingBox: Rect;
   private mousePosition: { x: number; y: number } | null = null;
+  private _scaleFactor = 1;
+  private _baseScale = 4;
 
   constructor() {
     this.boundingBox = {
@@ -50,27 +52,37 @@ export class Minimap implements UIObject {
       x: e.x,
       y: e.y,
     };
+    const scale = this._baseScale * this._scaleFactor;
     if (this._onViewportChangeHandler) {
       this._onViewportChangeHandler({
-        x: this.mousePosition.x / 4,
-        y: this.mousePosition.y / 4,
+        x: this.mousePosition.x / scale,
+        y: this.mousePosition.y / scale,
       });
     }
   }
 
-  render(ctx: CanvasRenderingContext2D, params: RenderParameters) {
+  render(ctx: CanvasRenderingContext2D, params: RenderParameters, width: number) {
     if (!ctx) return;
     const { stage } = params;
     if (!stage) return;
-    this.boundingBox.h = stage.goalY * 4;
+
+    // Scale minimap based on canvas size
+    this._scaleFactor = Math.max(1, width / 1280);
+    const scale = this._baseScale * this._scaleFactor;
+    const margin = 10 * this._scaleFactor;
+
+    this.boundingBox.x = margin;
+    this.boundingBox.y = margin;
+    this.boundingBox.w = 26 * scale;
+    this.boundingBox.h = stage.goalY * scale;
 
     this.lastParams = params;
 
     this.ctx = ctx;
     ctx.save();
     ctx.fillStyle = params.theme.minimapBackground;
-    ctx.translate(10, 10);
-    ctx.scale(4, 4);
+    ctx.translate(margin, margin);
+    ctx.scale(scale, scale);
     ctx.fillRect(0, 0, 26, stage.goalY);
 
     this.ctx.lineWidth = 3 / (params.camera.zoom + initialZoom);
@@ -81,7 +93,7 @@ export class Minimap implements UIObject {
     ctx.restore();
     ctx.save();
     ctx.strokeStyle = 'green';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1 * this._scaleFactor;
     ctx.strokeRect(
       this.boundingBox.x,
       this.boundingBox.y,

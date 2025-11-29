@@ -18,6 +18,7 @@ import { Box2dPhysics } from './physics-box2d';
 import { MouseEventHandlerName, MouseEventName } from './types/mouseEvents.type';
 import { FastForwader } from './fastForwader';
 import { ColorTheme } from './types/ColorTheme';
+import { AudioManager } from './audioManager';
 
 export class Roulette extends EventTarget {
   private _marbles: Marble[] = [];
@@ -30,6 +31,7 @@ export class Roulette extends EventTarget {
   private _speed = 1;
 
   private _winners: Marble[] = [];
+  private _selectedWinners: { marble: Marble, position: number }[] = []; // Winners at specified positions with their actual position
   private _particleManager = new ParticleManager();
   private _stage: StageDef | null = null;
 
@@ -39,6 +41,7 @@ export class Roulette extends EventTarget {
   private _effects: GameObject[] = [];
 
   private _winnerRank = 0;
+  private _winnerRanks: number[] = [0]; // Array of winning positions (0-indexed)
   private _totalMarbleCount = 0;
   private _goalDist: number = Infinity;
   private _isRunning: boolean = false;
@@ -54,6 +57,7 @@ export class Roulette extends EventTarget {
   private _isReady: boolean = false;
   private fastForwarder!: FastForwader;
   private _theme: ColorTheme = Themes.dark;
+  private _audioManager = new AudioManager();
 
   get isReady() {
     return this._isReady;
@@ -140,31 +144,28 @@ export class Roulette extends EventTarget {
       }
       if (marble.y > this._stage.goalY) {
         this._winners.push(marble);
-        if (this._isRunning && this._winners.length === this._winnerRank + 1) {
+        const currentPosition = this._winners.length - 1; // 0-indexed position
+
+        // Check if this position is one of the selected winner positions
+        if (this._winnerRanks.includes(currentPosition)) {
+          this._selectedWinners.push({ marble, position: currentPosition + 1 }); // Store 1-indexed position
+        }
+
+        // Check if all selected winner positions have been filled
+        const allWinnersFound = this._winnerRanks.every(rank => rank < this._winners.length);
+        const lastWinnerRank = Math.max(...this._winnerRanks);
+
+        if (this._isRunning && allWinnersFound && currentPosition === lastWinnerRank) {
           this.dispatchEvent(
             new CustomEvent('goal', { detail: { winner: marble.name } }),
           );
           this._winner = marble;
           this._isRunning = false;
-          this._particleManager.shot(
-            this._renderer.width,
-            this._renderer.height,
-          );
-          setTimeout(() => {
-            this._recorder.stop();
-          }, 1000);
-        } else if (
-          this._isRunning &&
-          this._winnerRank === this._winners.length &&
-          this._winnerRank === this._totalMarbleCount - 1
-        ) {
-          this.dispatchEvent(
-            new CustomEvent('goal', {
-              detail: { winner: this._marbles[i + 1].name },
-            }),
-          );
-          this._winner = this._marbles[i + 1];
-          this._isRunning = false;
+
+          // Play winner sound and stop music
+          this._audioManager.stopBackgroundMusic();
+          this._audioManager.play('winner');
+
           this._particleManager.shot(
             this._renderer.width,
             this._renderer.height,
@@ -179,7 +180,8 @@ export class Roulette extends EventTarget {
       }
     }
 
-    const targetIndex = this._winnerRank - this._winners.length;
+    const lastWinnerRank = Math.max(...this._winnerRanks);
+    const targetIndex = lastWinnerRank - this._winners.length;
     const topY = this._marbles[targetIndex] ? this._marbles[targetIndex].y : 0;
     this._goalDist = Math.abs(this._stage.zoomY - topY);
     this._timeScale = this._calcTimeScale();
@@ -191,17 +193,19 @@ export class Roulette extends EventTarget {
 
   private _calcTimeScale(): number {
     if (!this._stage) return 1;
-    const targetIndex = this._winnerRank - this._winners.length;
+    const lastWinnerRank = Math.max(...this._winnerRanks);
+    const targetIndex = lastWinnerRank - this._winners.length;
     if (
-      this._winners.length < this._winnerRank + 1 &&
+      this._winners.length < lastWinnerRank + 1 &&
       this._goalDist < zoomThreshold
     ) {
       if (
+        this._marbles[targetIndex] &&
         this._marbles[targetIndex].y >
         this._stage.zoomY - zoomThreshold * 1.2 &&
         (this._marbles[targetIndex - 1] || this._marbles[targetIndex + 1])
       ) {
-        return Math.max(0.2, this._goalDist / zoomThreshold);
+        return Math.max(0.4, this._goalDist / zoomThreshold);
       }
     }
     return 1;
@@ -214,15 +218,18 @@ export class Roulette extends EventTarget {
 
   private _render() {
     if (!this._stage) return;
+    const lastWinnerRank = Math.max(...this._winnerRanks);
     const renderParams = {
       camera: this._camera,
       stage: this._stage,
       entities: this.physics.getEntities(),
       marbles: this._marbles,
-      winners: this._winners,
+      winners: this._selectedWinners, // Only show selected winner positions
+      allWinners: this._winners, // All finishers for rank display
       particleManager: this._particleManager,
       effects: this._effects,
-      winnerRank: this._winnerRank,
+      winnerRank: lastWinnerRank,
+      winnerRanks: this._winnerRanks,
       winner: this._winner,
       size: { x: this._renderer.width, y: this._renderer.height },
       theme: this._theme,
@@ -235,6 +242,9 @@ export class Roulette extends EventTarget {
 
     this.physics = new Box2dPhysics();
     await this.physics.init();
+
+    // Initialize audio manager
+    await this._audioManager.init();
 
     this.addUiObject(new RankRenderer());
     this.attachEvent();
@@ -304,16 +314,24 @@ export class Roulette extends EventTarget {
     this.physics.clearMarbles();
     this._winner = null;
     this._winners = [];
+    this._selectedWinners = [];
     this._marbles = [];
   }
 
   public start() {
     this._isRunning = true;
-    this._winnerRank = options.winningRank;
-    if (this._winnerRank >= this._marbles.length) {
-      this._winnerRank = this._marbles.length - 1;
+    this._winnerRanks = options.winningRanks.filter(rank => rank < this._marbles.length);
+    if (this._winnerRanks.length === 0) {
+      this._winnerRanks = [0];
     }
+    this._winnerRank = Math.max(...this._winnerRanks);
     this._camera.startFollowingMarbles();
+
+    // Play start sound and begin music
+    this._audioManager.play('start');
+    setTimeout(() => {
+      this._audioManager.startBackgroundMusic();
+    }, 500);
 
     if (this._autoRecording) {
       this._recorder.start().then(() => {
@@ -335,6 +353,15 @@ export class Roulette extends EventTarget {
 
   public setTheme(themeName: keyof typeof Themes) {
     this._theme = Themes[themeName];
+    this._renderer.theme = this._theme;
+  }
+
+  public enableSnow() {
+    this._particleManager.enableSnow(this._renderer.width, this._renderer.height);
+  }
+
+  public disableSnow() {
+    this._particleManager.disableSnow();
   }
 
   public getSpeed() {
@@ -345,8 +372,21 @@ export class Roulette extends EventTarget {
     this._winnerRank = rank;
   }
 
+  public setWinningRanks(ranks: number[]) {
+    this._winnerRanks = ranks;
+    this._winnerRank = Math.max(...ranks);
+  }
+
   public setAutoRecording(value: boolean) {
     this._autoRecording = value;
+  }
+
+  public setAudioMuted(muted: boolean) {
+    this._audioManager.setMuted(muted);
+  }
+
+  public setAudioVolume(volume: number) {
+    this._audioManager.setVolume(volume);
   }
 
   public setMarbles(names: string[]) {
