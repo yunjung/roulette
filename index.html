@@ -1,0 +1,67 @@
+<!DOCTYPE html><html lang=en><script type=importmap>{"imports":{"2rDQN":"/roulette/Box2D.simd.dd31b167.wasm","81bEE":"/roulette/jingle3.ee0a8753.mp3","8BShk":"/roulette/Box2D.simd.2fa02903.js","9DwmV":"/roulette/kkwak.673a610d.png","9YLvj":"/roulette/waldokun.7e88dd59.png","afhqB":"/roulette/bell-impact.55002768.mp3","bsMA0":"/roulette/jingle2.ee0a8753.mp3","c4SxZ":"/roulette/background-music.1562dc93.mp4","cdgIR":"/roulette/chamru.d6926a56.png","fkRhi":"/roulette/junyoop.d27f0cbf.png","ftUen":"/roulette/jingle1.ee0a8753.mp3","h7cmx":"/roulette/Box2D.b9b16b27.wasm","ilUZb":"/roulette/Box2D.a11658c7.js","juMvj":"/roulette/ff.7fdc9e82.svg","kT8FC":"/roulette/sleigh-bells.1c60266f.mp3","lGPCn":"/roulette/christmas-fanfare.2863e091.mp3","lfSvD":"/roulette/kubin.f3647b70.png"}}</script><meta charset=UTF-8><meta http-equiv=X-UA-Compatible content="ie=edge"><script async src="https://www.googletagmanager.com/gtag/js?id=G-5899C1DJM0"></script><title>Marble Roulette</title><meta name=viewport content="width=device-width, initial-scale=1.0"><link rel=apple-touch-icon sizes=57x57 href=/roulette/apple-icon-57x57.5ecd1650.png><link rel=apple-touch-icon sizes=60x60 href=/roulette/apple-icon-60x60.b46a75af.png><link rel=apple-touch-icon sizes=72x72 href=/roulette/apple-icon-72x72.4726ed35.png><link rel=apple-touch-icon sizes=76x76 href=/roulette/apple-icon-76x76.72dbc1e1.png><link rel=apple-touch-icon sizes=114x114 href=/roulette/apple-icon-114x114.6cefcd75.png><link rel=apple-touch-icon sizes=120x120 href=/roulette/apple-icon-120x120.462d8e84.png><link rel=apple-touch-icon sizes=144x144 href=/roulette/apple-icon-144x144.36ef70f8.png><link rel=apple-touch-icon sizes=152x152 href=/roulette/apple-icon-152x152.1f1d2b56.png><link rel=apple-touch-icon sizes=180x180 href=/roulette/apple-icon-180x180.33666671.png><link rel=icon type=image/png sizes=192x192 href=/roulette/android-icon-192x192.6c0734fc.png><link rel=icon type=image/png sizes=32x32 href=/roulette/favicon-32x32.b3414860.png><link rel=icon type=image/png sizes=96x96 href=/roulette/favicon-96x96.b086bd80.png><link rel=icon type=image/png sizes=16x16 href=/roulette/favicon-16x16.b88a3ef4.png><link rel=manifest href=/roulette/assets/manifest.webmanifest><meta name=msapplication-TileColor content=#ffffff><meta name=msapplication-TileImage content=/roulette/ms-icon-144x144.e402ee4a.png><meta name=theme-color content=#ffffff><meta name=description content="A lucky draw by dropping marbles, made by lazygyu"><meta property=og:url content=https://lazygyu.github.io/roulette/><meta property=og:title content="Marble Roulette"><meta property=og:description content="A lucky draw by dropping marbles, made by lazygyu"><meta property=og:site_name content=lazygyu.github.io><meta property=og:type content=website><link rel=stylesheet href=/roulette/roulette.cccea356.css><body>
+<script type=module src=/roulette/roulette.c18fc594.js></script>
+<script>function gtag(){dataLayer.push(arguments)}function getNames(){return document.querySelector("#in_names").value.trim().split(/[,\r\n]/g).map(e=>e.trim()).filter(e=>!!e)}function parseName(e){let t=/(\/\d+)/,n=/(\*\d+)/,i=t.test(e),o=n.test(e),a=/^\s*([^\/*]+)?/.exec(e)[1];return{name:a,weight:i?parseInt(t.exec(e)[1].replace("/","")):1,count:o?parseInt(n.exec(e)[1].replace("*","")):1}}function getReady(){let e=getNames();window.roulette.setMarbles(e),ready=e.length>0,localStorage.setItem("mbr_names",e.join(","));let t=document.querySelector("#in_winnerPositions").value.trim();if(t){let e=t.split(",").map(e=>parseInt(e.trim(),10)).filter(e=>!isNaN(e)&&e>0).slice(0,5);e.length>0&&setWinnerRanks(e)}}function setWinnerRanks(e){let t=e.map(e=>e-1);window.options.winningRanks=t,window.options.winningRank=Math.max(...t),window.roulette.setWinningRanks(t)}function setWinnerRank(e){document.querySelector("#in_winnerPositions").value=e,setWinnerRanks([e])}window.dataLayer=window.dataLayer||[],gtag("js",new Date),gtag("config","G-5899C1DJM0");let ready=!1;function initialize(){if(!window.roulette||!window.roulette.isReady){console.log("does not loaded yet"),setTimeout(initialize,100);return}console.log("initializing start");let e=new URLSearchParams(window.location.search).get("names");e&&(document.querySelector("#in_names").value=e.replace(/,/g,"\n")),document.querySelector("#in_names").addEventListener("input",()=>{getReady()}),document.querySelector("#in_names").addEventListener("blur",()=>{let e=getNames(),t=new Set,n={};e.forEach(e=>{let i=parseName(e),o=i.weight>1?`${i.name}/${i.weight}`:i.name;t.has(o)||(t.add(o),n[o]=0),n[o]+=i.count});let i=[];Object.keys(n).forEach(e=>{n[e]>1?i.push(`${e}*${n[e]}`):i.push(e)});let o=document.querySelector("#in_names").value,a=i.join(",");o!==a&&(document.querySelector("#in_names").value=a,getReady())}),document.querySelector("#btnShuffle").addEventListener("click",()=>{getReady()}),document.querySelector("#btnStart").addEventListener("click",()=>{ready&&(gtag&&gtag("event","start",{event_category:"roulette",event_label:"start",value:window.roulette.getCount()}),window.roulette.start(),document.querySelector("#settings").classList.add("hide"))}),document.querySelector("#chkAutoRecording").addEventListener("change",e=>{window.options.autoRecording=e.target.matches(":checked"),window.roulette.setAutoRecording(window.options.autoRecording)}),document.querySelector("#chkAudio").addEventListener("change",e=>{let t=e.target.matches(":checked");window.roulette.setAudioMuted(!t)}),document.querySelector("#chkSkill").addEventListener("change",e=>{window.options.useSkills=e.target.matches(":checked"),window.roulette.setWinningRank(window.options.winningRank)}),window.roulette.setTheme("christmas"),window.roulette.enableSnow(),document.querySelector("#chkDarkMode").addEventListener("change",e=>{let t=e.target.matches(":checked");window.roulette.setTheme(t?"christmas":"dark"),t?window.roulette.enableSnow():window.roulette.disableSnow()}),document.querySelector("#in_winnerPositions").addEventListener("input",e=>{let t=e.target.value.trim();if(!t)return;let n=t.split(",").map(e=>parseInt(e.trim(),10)).filter(e=>!isNaN(e)&&e>0).slice(0,5);n.length>0&&setWinnerRanks(n)}),window.roulette.addEventListener("goal",()=>{ready=!1,setTimeout(()=>{document.querySelector("#settings").classList.remove("hide")},3e3)}),window.roulette.addEventListener("message",e=>{simpleToast(e.detail)}),document.querySelector("#btnShuffle").click();let t=window.roulette.getMaps(),n=document.querySelector("#sltMap");t.forEach(e=>{let t=document.createElement("option");t.value=e.index,t.innerHTML=e.title,t.setAttribute("data-trans",""),window.translateElement(t),n.append(t)}),n.addEventListener("change",e=>{let t=e.target.value;window.roulette.setMap(t)})}document.addEventListener("DOMContentLoaded",()=>{initialize()});</script>
+<div id=settings class=settings>
+  <div class=right>
+    <div class=row>
+      <label for=sltMap>
+        <i class="icon map"></i>
+        <span data-trans>Map</span>
+      </label>
+      <select id=sltMap></select>
+    </div>
+    <div class=row>
+      <label for=chkAutoRecording>
+        <i class="icon record"></i>
+        <span data-trans>Recording</span>
+      </label>
+      <input type=checkbox id=chkAutoRecording>
+    </div>
+    <div class=row>
+      <label for=chkAudio>
+        <span style=font-size:16px>🔊</span>
+        <span data-trans>Sound</span>
+      </label>
+      <input type=checkbox id=chkAudio checked>
+    </div>
+    <div class=row>
+      <label for=in_winnerPositions>
+        <i class="icon trophy"></i>
+        <span data-trans>Winner position(s)</span>
+      </label>
+      <input id=in_winnerPositions value=1 placeholder="e.g., 1 or 1,3,5">
+    </div>
+    <div class=row>
+      <label for=chkSkill>
+        <i class="bomb icon"></i>
+        <span data-trans>Using skills</span>
+      </label>
+      <input type=checkbox id=chkSkill checked>
+      <div class=theme>
+        <span style=font-size:20px>🌙</span>
+        <input type=checkbox id=chkDarkMode checked>
+        <span style=font-size:20px>🎄</span>
+      </div>
+    </div>
+  </div>
+  <div class=left>
+    <h3 data-trans>Enter names below</h3>
+    <textarea id=in_names placeholder="Input names separated by commas or line feed here" data-trans=placeholder>루돌프1,루돌프2,루돌프3,루돌프4,루돌프5,루돌프6,루돌프7,루돌프8,루돌프9,루돌프10,루돌프11,루돌프12,루돌프13,루돌프14,루돌프15,루돌프16,루돌프17,루돌프18,루돌프19,루돌프20,루돌프21,루돌프22,루돌프23,루돌프24,루돌프25,루돌프26,루돌프27,루돌프28,루돌프29,루돌프30,루돌프31,루돌프32,루돌프33,루돌프34,루돌프35,루돌프36,루돌프37,루돌프38,루돌프39,루돌프40,루돌프41,루돌프42,루돌프43,루돌프44,루돌프45,루돌프46,루돌프47,루돌프48,루돌프49,루돌프50</textarea>
+    <div class=actions>
+
+      <button id=btnShuffle>
+        <i class="icon shuffle"></i>
+        <span data-trans>Shuffle</span>
+      </button>
+      <button id=btnStart>
+        <i class="icon play"></i>
+        <span data-trans>Start</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class=copyright>© 2022-2025.<a href=https://lazygyu.net target=_blank>lazygyu</a> <span data-trans>This program is freeware and may be used freely anywhere, including in broadcasts and videos.</span>
+</div>
+
+
