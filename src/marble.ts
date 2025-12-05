@@ -270,7 +270,7 @@ export class Marble {
   private _drawName(ctx: CanvasRenderingContext2D, zoom: number) {
     const yPos = this.y + this.floatOffset;
     transformGuard(ctx, () => {
-      ctx.font = `bold 21pt sans-serif`;
+      ctx.font = `bold 26pt sans-serif`;
       ctx.strokeStyle = 'black';
       ctx.lineWidth = 3;
       ctx.fillStyle = this.color;

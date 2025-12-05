@@ -168,11 +168,6 @@
       document.querySelector('#settings').classList.add('hide');
     });
 
-    document.querySelector('#chkAutoRecording').addEventListener('change', (e) => {
-      window.options.autoRecording = e.target.matches(':checked');
-      window.roulette.setAutoRecording(window.options.autoRecording);
-    });
-
     document.querySelector('#chkAudio').addEventListener('change', (e) => {
       const enabled = e.target.matches(':checked');
       window.roulette.setAudioMuted(!enabled);
@@ -249,13 +244,6 @@
         <span data-trans>Map</span>
       </label>
       <select id="sltMap"></select>
-    </div>
-    <div class="row">
-      <label for='chkAutoRecording'>
-        <i class="icon record"></i>
-        <span data-trans>Recording</span>
-      </label>
-      <input type="checkbox" id="chkAutoRecording" />
     </div>
     <div class="row">
       <label for='chkAudio'>

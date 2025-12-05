@@ -12,7 +12,6 @@ import { bound } from './utils/bound.decorator';
 import { UIObject } from './UIObject';
 import { RankRenderer } from './rankRenderer';
 import { Minimap } from './minimap';
-import { VideoRecorder } from './utils/videoRecorder';
 import { IPhysics } from './IPhysics';
 import { Box2dPhysics } from './physics-box2d';
 import { MouseEventHandlerName, MouseEventName } from './types/mouseEvents.type';
@@ -48,9 +47,6 @@ export class Roulette extends EventTarget {
   private _winner: Marble | null = null;
 
   private _uiObjects: UIObject[] = [];
-
-  private _autoRecording: boolean = false;
-  private _recorder!: VideoRecorder;
 
   private physics!: IPhysics;
 
@@ -170,9 +166,6 @@ export class Roulette extends EventTarget {
             this._renderer.width,
             this._renderer.height,
           );
-          setTimeout(() => {
-            this._recorder.stop();
-          }, 1000);
         }
         setTimeout(() => {
           this.physics.removeMarble(marble.id);
@@ -238,8 +231,6 @@ export class Roulette extends EventTarget {
   }
 
   private async _init() {
-    this._recorder = new VideoRecorder(this._renderer.canvas);
-
     this.physics = new Box2dPhysics();
     await this.physics.init();
 
@@ -333,15 +324,8 @@ export class Roulette extends EventTarget {
       this._audioManager.startBackgroundMusic();
     }, 500);
 
-    if (this._autoRecording) {
-      this._recorder.start().then(() => {
-        this.physics.start();
-        this._marbles.forEach((marble) => (marble.isActive = true));
-      });
-    } else {
-      this.physics.start();
-      this._marbles.forEach((marble) => (marble.isActive = true));
-    }
+    this.physics.start();
+    this._marbles.forEach((marble) => (marble.isActive = true));
   }
 
   public setSpeed(value: number) {
@@ -375,10 +359,6 @@ export class Roulette extends EventTarget {
   public setWinningRanks(ranks: number[]) {
     this._winnerRanks = ranks;
     this._winnerRank = Math.max(...ranks);
-  }
-
-  public setAutoRecording(value: boolean) {
-    this._autoRecording = value;
   }
 
   public setAudioMuted(muted: boolean) {
