@@ -274,14 +274,14 @@ export class RouletteRenderer {
     const winnerNames = winners.map(w => `#${w.position} ${w.marble.name}`).join(', ');
 
     // Calculate font size based on text length and panel width
-    const panelWidth = this._canvas.width / 2;
-    const panelX = this._canvas.width / 2;
-    const headerHeight = 70;
-    const contentHeight = 60;
+    const panelWidth = this._canvas.width * 0.7; // 70% of canvas width
+    const panelX = (this._canvas.width - panelWidth) / 2; // Center horizontally
+    const headerHeight = 120;
+    const contentHeight = 100;
     const panelHeight = headerHeight + contentHeight;
-    const panelY = this._canvas.height - panelHeight;
+    const panelY = (this._canvas.height - panelHeight) / 2; // Center vertically
 
-    // Gradient background
+    // Gradient background - more opaque for better text readability
     if (theme.accentGlow) {
       const bgGradient = this.ctx.createLinearGradient(
         panelX,
@@ -289,8 +289,8 @@ export class RouletteRenderer {
         panelX,
         this._canvas.height,
       );
-      bgGradient.addColorStop(0, 'rgba(196, 30, 58, 0.4)'); // Christmas red
-      bgGradient.addColorStop(1, 'rgba(196, 30, 58, 0.6)');
+      bgGradient.addColorStop(0, 'rgba(196, 30, 58, 0.95)'); // Christmas red - increased opacity
+      bgGradient.addColorStop(1, 'rgba(196, 30, 58, 0.95)');
       this.ctx.fillStyle = bgGradient;
     } else {
       this.ctx.fillStyle = theme.winnerBackground;
@@ -314,50 +314,46 @@ export class RouletteRenderer {
     // "Winner" text with Christmas styling
     this.ctx.fillStyle = theme.accentGlow || '#FFD700'; // Gold
     this.ctx.strokeStyle = theme.winnerOutline || '#8B0000'; // Dark red outline
-    this.ctx.font = 'bold 42px sans-serif';
-    this.ctx.textAlign = 'right';
-    this.ctx.lineWidth = 4;
+    this.ctx.font = 'bold 64px sans-serif';
+    this.ctx.textAlign = 'center'; // Center align the text
+    this.ctx.lineWidth = 6;
 
-    // Text glow
-    if (theme.accentGlow) {
-      this.ctx.shadowColor = theme.accentGlow;
-      this.ctx.shadowBlur = 20;
-    }
-
-    const winnerTextY = panelY + 50;
+    const winnerTextY = panelY + 75;
+    const winnerTextX = panelX + panelWidth / 2; // Center of the panel
     const winnerText = winners.length > 1
       ? (theme.accentGlow ? '🎄 Winners! 🎄' : 'Winners')
       : (theme.accentGlow ? '🎄 Winner! 🎄' : 'Winner');
     if (theme.winnerOutline) {
-      this.ctx.strokeText(winnerText, this._canvas.width - 20, winnerTextY);
+      this.ctx.strokeText(winnerText, winnerTextX, winnerTextY);
     }
-    this.ctx.fillText(winnerText, this._canvas.width - 20, winnerTextY);
+    this.ctx.fillText(winnerText, winnerTextX, winnerTextY);
 
     // Reset shadow blur before drawing winner names
     this.ctx.shadowBlur = 0;
 
     // Display winner names in a single line, comma-separated
     // Calculate font size to fit the panel width
-    const maxWidth = panelWidth - 40;
-    let fontSize = 36;
+    const maxWidth = panelWidth - 80;
+    let fontSize = 52;
     this.ctx.font = `bold ${fontSize}px sans-serif`;
 
     // Reduce font size until text fits
-    while (this.ctx.measureText(winnerNames).width > maxWidth && fontSize > 14) {
+    while (this.ctx.measureText(winnerNames).width > maxWidth && fontSize > 20) {
       fontSize -= 2;
       this.ctx.font = `bold ${fontSize}px sans-serif`;
     }
 
-    this.ctx.lineWidth = Math.max(2, fontSize / 12);
-    this.ctx.fillStyle = theme.accentGlow || '#FFD700';
-    this.ctx.strokeStyle = '#FFFFFF';
+    this.ctx.lineWidth = Math.max(2, fontSize / 15); // Reduced stroke width
+    this.ctx.fillStyle = '#FFFFFF'; // White for better readability on red background
+    this.ctx.strokeStyle = '#000000'; // Dark outline for contrast
+    this.ctx.textAlign = 'center'; // Center align the names
 
-    const nameY = panelY + headerHeight + 35;
+    const nameY = panelY + headerHeight + 55;
+    const nameX = panelX + panelWidth / 2; // Center of the panel
 
-    if (theme.winnerOutline) {
-      this.ctx.strokeText(winnerNames, this._canvas.width - 20, nameY);
-    }
-    this.ctx.fillText(winnerNames, this._canvas.width - 20, nameY);
+    // Draw subtle outline for contrast
+    this.ctx.strokeText(winnerNames, nameX, nameY);
+    this.ctx.fillText(winnerNames, nameX, nameY);
 
     this.ctx.restore();
   }

@@ -1,6 +1,6 @@
 import { ColorTheme } from '../types/ColorTheme';
 
-export const initialZoom = 55;
+export const initialZoom = 65;
 export const canvasWidth = 1200;
 export const canvasHeight = 900;
 export const zoomThreshold = 3;
